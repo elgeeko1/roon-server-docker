@@ -1,9 +1,11 @@
 # Roon Sever in Docker
+Docker image containing Roon Server.
 
-Build a Docker image containing Roon Server. Simply run `build.sh`.
+Supports running Roon Server in an unprivileged container, and with Docker
+network mode of 'macvlan', 'host' or 'bridge' (with restrictions).
 
-# Resources
+See https://hub.docker.com/repository/docker/elgeeko/roon-server for
+documentation on how to use.
 
-I occassionally build this image and upload to Docker Hub: https://hub.docker.com/repository/docker/elgeeko/roon-server
-
-Ansible script for deploying Roon Server to a Linux target (part of a stereo IR blaster project): https://github.com/elgeeko1/stereo-blaster-as-a-service
+# Building
+Run `build.sh`.
