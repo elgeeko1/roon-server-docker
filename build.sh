@@ -2,8 +2,7 @@
 
 set -e
 
-# enable docker BuildKit features
-export DOCKER_BUILDKIT=1
+DOCKER_BUILD_ARGS=${@}
 
 ROON_PACKAGE_URI=http://download.roonlabs.com/builds/RoonServer_linuxx64.tar.bz2
 ROON_PACKAGE_NAME=RoonServer
@@ -24,4 +23,5 @@ wget http://download.roonlabs.com/builds/RoonServer_linuxx64.tar.bz2
 tar -xvf RoonServer_linuxx64.tar.bz2
 popd
 
-docker build . --build-arg BUILDKIT_INLINE_CACHE=1
+echo DOCKER_BUILD_ARGS=${DOCKER_BUILD_ARGS}
+docker build . ${DOCKER_BUILD_ARGS}
