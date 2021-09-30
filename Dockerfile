@@ -12,11 +12,6 @@ EXPOSE 63098-63100/tcp
 
 ARG ROON_SERVER_SRC=./build/RoonServer
 
-ENV ROON_DATAROOT=/var/roon
-ENV ROON_ID_DIR=/var/roon
-VOLUME ["/var/roon"]
-VOLUME ["/music"]
-
 # set timezone (for interactive environments)
 RUN apt-get update -q \
   && apt-get install --no-install-recommends -y -q tzdata \
@@ -44,10 +39,21 @@ RUN apt-get update -q \
 COPY ${ROON_SERVER_SRC} /opt/RoonServer
 
 # container user
-# use a random UID to prevent inadvertent collisions with host filesystem
 ARG CONTAINER_USER=roon
-RUN adduser --disabled-password --gecos "" --uid `shuf -i 2000-60000 -n 1` ${CONTAINER_USER}
+ARG CONTAINER_USER_UID=1000
+RUN adduser --disabled-password --gecos "" --uid ${CONTAINER_USER_UID} ${CONTAINER_USER} \
+  && chown -R ${CONTAINER_USER} /opt/RoonServer \
+  && chgrp -R ${CONTAINER_USER} /opt/RoonServer \
+  && mkdir -p /var/roon \
+  && chown -R ${CONTAINER_USER} /var/roon \
+  && chgrp -R ${CONTAINER_USER} /var/roon
+
 USER ${CONTAINER_USER}
+
+ENV ROON_DATAROOT=/var/roon
+ENV ROON_ID_DIR=/var/roon
+VOLUME ["/var/roon"]
+VOLUME ["/music"]
 
 # curl the Roon display to verify Roon is running
 HEALTHCHECK --interval=1m --timeout=1s --start-period=5s \
