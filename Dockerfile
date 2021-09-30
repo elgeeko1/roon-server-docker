@@ -1,4 +1,4 @@
-FROM ubuntu:groovy
+FROM ubuntu:18.04
 LABEL maintainer="https://github.com/elgeeko1"
 
 USER root
@@ -19,7 +19,7 @@ VOLUME ["/music"]
 
 # set timezone (for interactive environments)
 RUN apt-get update -q \
-  && apt-get install -y -q tzdata \
+  && apt-get install --no-install-recommends -y -q tzdata \
 	&& echo "US/Los_Angeles" > /etc/timezone \
 	&& ln -fs /usr/share/zoneinfo/US/Los_Angeles /etc/localtime \
 	&& dpkg-reconfigure -f noninteractive tzdata \
@@ -31,7 +31,7 @@ RUN apt-get update -q \
 #  - Docker healthcheck: curl
 #  - Query USB devices inside Docker container: usbutils udev
 RUN apt-get update -q \
-  && apt-get install -y -q \
+  && apt-get install --no-install-recommends -y -q \
 		ffmpeg \
 		libasound2 \
 		cifs-utils \
@@ -43,8 +43,14 @@ RUN apt-get update -q \
 # copy RoonServer package
 COPY ${ROON_SERVER_SRC} /opt/RoonServer
 
-ENTRYPOINT ["/opt/RoonServer/start.sh"]
+# container user
+# use a random UID to prevent inadvertent collisions with host filesystem
+ARG CONTAINER_USER=roon
+RUN adduser --disabled-password --gecos "" --uid `shuf -i 2000-60000 -n 1` ${CONTAINER_USER}
+USER ${CONTAINER_USER}
 
 # curl the Roon display to verify Roon is running
 HEALTHCHECK --interval=1m --timeout=1s --start-period=5s \
    CMD curl -f http://localhost:9100/display/ || exit 1
+
+ENTRYPOINT ["/opt/RoonServer/start.sh"]
