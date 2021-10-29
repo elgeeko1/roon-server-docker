@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 LABEL maintainer="https://github.com/elgeeko1"
 
 USER root
@@ -15,7 +15,7 @@ ARG ROON_SERVER_SRC=./build/RoonServer
 # set timezone (for interactive environments)
 RUN apt-get update -q \
   && apt-get install --no-install-recommends -y -q tzdata \
-	&& echo "US/Los_Angeles" > /etc/timezone \
+	&& echo "America/Los_Angeles" > /etc/timezone \
 	&& ln -fs /usr/share/zoneinfo/US/Los_Angeles /etc/localtime \
 	&& dpkg-reconfigure -f noninteractive tzdata \
   && apt-get -q -y clean \
