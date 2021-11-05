@@ -8,4 +8,4 @@ See https://hub.docker.com/repository/docker/elgeeko/roon-server for
 documentation on how to use.
 
 # Building
-Run `build.sh`.
+`docker build .`

@@ -10,7 +10,7 @@ EXPOSE 52667/tcp
 EXPOSE 52709/tcp
 EXPOSE 63098-63100/tcp
 
-ARG ROON_SERVER_SRC=./build/RoonServer
+ARG ROON_PACKAGE_URI=http://download.roonlabs.com/builds/RoonServer_linuxx64.tar.bz2
 
 # set timezone (for interactive environments)
 RUN apt-get update -q \
@@ -22,7 +22,7 @@ RUN apt-get update -q \
 	&& rm -rf /var/lib/apt/lists/*
 
 # install Roon prerequisites:
-#  - Roon requirements: ffmpeg libasound2 cifs-utils
+#  - Roon requirements: ffmpeg libasound2 cifs-utils libicu66
 #  - Docker healthcheck: curl
 #  - Query USB devices inside Docker container: usbutils udev
 RUN apt-get update -q \
@@ -31,12 +31,13 @@ RUN apt-get update -q \
 		libasound2 \
 		cifs-utils \
 		curl \
-		usbutils udev \
+		usbutils \
+    udev \
   && apt-get -q -y clean \
 	&& rm -rf /var/lib/apt/lists/*
 
-# copy RoonServer package
-COPY ${ROON_SERVER_SRC} /opt/RoonServer
+# Download RoonServer package
+RUN curl ${ROON_PACKAGE_URI} | tar -xvj -C /opt
 
 # container user
 ARG CONTAINER_USER=roon
