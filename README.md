@@ -2,6 +2,7 @@
 Roon Server in a docker container.
 
 ### Features
+- Downloads and installs latest Roon Server on first container start
 - Audio input from a local music library
 - Audio input from Tidal or Qobuz
 - Audio output to USB DAC devices connected to the Roon Server host
@@ -93,6 +94,8 @@ Add the following arguments to the `docker run` command:
 - USB DACs connected to the system for the first time do not appear in Roon.
 The workaround is to restart the container. Once the device has been initially
 connected, disconnecting and reconnecting is reflected in Roon.
+- Mounting network drives via cisfs may require root access. The workaround is to
+run the container with the `user=root` option in the `docker run` command.
 
 # Building from the Dockerfile
 `docker build .`

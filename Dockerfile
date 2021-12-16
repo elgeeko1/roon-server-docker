@@ -28,16 +28,17 @@ EXPOSE 52709/tcp
 EXPOSE 63098-63100/tcp
 
 # URI from which to download RoonServer build
-ARG ROON_PACKAGE_URI=http://download.roonlabs.com/builds/RoonServer_linuxx64.tar.bz2
+ENV ROON_PACKAGE_URI=http://download.roonlabs.com/builds/RoonServer_linuxx64.tar.bz2
 
 # set timezone. change to match your local zone.
 # matching container to host timezones synchronizes
 # last.fm posts, filesystem write times, and user
 # expectations for times shown in the Roon client.
+ARG TIMEZONE=America/Los_Angeles
+ENV TIMEZONE=${TIMEZONE}
 RUN apt-get update -q \
   && apt-get install --no-install-recommends -y -q tzdata \
-  && echo "America/Los_Angeles" > /etc/timezone \
-  && ln -fs /usr/share/zoneinfo/US/Los_Angeles /etc/localtime \
+  && echo "${TIMEZONE}" > /etc/timezone \
   && dpkg-reconfigure -f noninteractive tzdata \
   && apt-get -q -y clean \
   && rm -rf /var/lib/apt/lists/*
@@ -46,7 +47,7 @@ RUN apt-get update -q \
 #  - Roon requirements: ffmpeg libasound2 cifs-utils libicu66
 #  - Roon play to local audio device: alsa
 #  - Docker healthcheck: curl
-#  - Roon build download & extraction: curl bzip2
+#  - Roon build download & extraction: wget bzip2
 #  - Query USB devices inside Docker container: usbutils udev
 RUN apt-get update -q \
   && apt-get install --no-install-recommends -y -q \
@@ -56,14 +57,18 @@ RUN apt-get update -q \
     libicu66 \
     alsa \
     curl \
+    wget \
     bzip2 \
     usbutils \
     udev \
   && apt-get -q -y clean \
   && rm -rf /var/lib/apt/lists/*
 
-# Download RoonServer package
-RUN curl ${ROON_PACKAGE_URI} | tar -xvj -C /opt
+# Download RoonServer package.
+# Disabled, since Roon license does not permit redistribution.
+# Re-enable for local builds, or leave out and Roon will be
+# installed when the container is first run.
+# RUN curl ${ROON_PACKAGE_URI} | tar -xvj -C /opt
 
 # non-root container user.
 # you may want to randomize the UID to prevent
@@ -75,11 +80,15 @@ RUN curl ${ROON_PACKAGE_URI} | tar -xvj -C /opt
 ARG CONTAINER_USER=roon
 ARG CONTAINER_USER_UID=1000
 RUN adduser --disabled-password --gecos "" --uid ${CONTAINER_USER_UID} ${CONTAINER_USER} \
+  && mkdir -p /opt/RoonServer \
   && chown -R ${CONTAINER_USER} /opt/RoonServer \
   && chgrp -R ${CONTAINER_USER} /opt/RoonServer \
   && mkdir -p /var/roon \
   && chown -R ${CONTAINER_USER} /var/roon \
   && chgrp -R ${CONTAINER_USER} /var/roon
+
+COPY app/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 USER ${CONTAINER_USER}
 
@@ -96,7 +105,7 @@ VOLUME ["/opt/RoonServer"]
 # startup script
 ENV ROON_DATAROOT=/var/roon
 ENV ROON_ID_DIR=/var/roon
-ENTRYPOINT ["/opt/RoonServer/start.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
 
 # curl the Roon display to verify Roon is running
 HEALTHCHECK --interval=1m --timeout=1s --start-period=5s \
