@@ -16,6 +16,12 @@ RoPieee, etc.
 
 # Running
 
+## Install prerequisites on the host
+Install the following audio packages into your host:
+```sh
+apt-get install alsa-utils libasound2 libasound2-data libasound2-plugins
+```
+
 ## Create persistent data directories in host filesystem
 The commands below require the following folders exist in your host filesystem:
 - `data` on your host which will be used for Roon's persistent storage. Example: `/home/myuser/roon/data`.
@@ -24,7 +30,7 @@ The commands below require the following folders exist in your host filesystem:
   - This folder is optional. Omit if you plan to exclusively stream music.
 
 Create the persistent data directories in the host filesystem:
-```
+```sh
 mkdir -p ~/roon
 mkdir -p ~/roon/data
 mkdir -p ~/roon/music
@@ -32,7 +38,7 @@ mkdir -p ~/roon/music
 
 ## Option 1: Run in least secure mode (easiest)
 Run using privileged execution mode and host network mode:
-```
+```sh
 docker run \
   --name roon-server \
   --volume ~/roon/data:/var/roon \
@@ -46,7 +52,7 @@ docker run \
 Run in an unprivileged container using macvlan network mode. Replace the subnet, gateway and IP address to match your local network.
 
 ### Create docker macvlan network
-```
+```sh
 docker network create \
   --driver macvlan \
   --subnet 192.168.1.0 \
@@ -56,7 +62,7 @@ docker network create \
 ```
 
 ### Run using unprivileged execution mode and macvlan network mode
-```
+```sh
 docker run \
   --name roon-server \
   --publish_all \
