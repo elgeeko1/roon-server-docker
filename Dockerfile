@@ -30,6 +30,15 @@ EXPOSE 63098-63100/tcp
 # URI from which to download RoonServer build
 ENV ROON_PACKAGE_URI=http://download.roonlabs.com/builds/RoonServer_linuxx64.tar.bz2
 
+# Preconfigure debconf for non-interactive installation - otherwise complains about terminal
+# Avoid ERROR: invoke-rc.d: policy-rc.d denied execution of start.
+ARG DEBIAN_FRONTEND=noninteractive
+ENV DISPLAY localhost:0.0
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
+	&& dpkg-divert --local --rename --add /sbin/initctl \
+	&& ln -sf /bin/true /sbin/initctl \
+	&& echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d
+
 # set timezone. change to match your local zone.
 # matching container to host timezones synchronizes
 # last.fm posts, filesystem write times, and user
