@@ -39,7 +39,7 @@ mkdir -p ~/roon/music
 ## Option 1: Run in least secure mode (easiest)
 Run using privileged execution mode and host network mode:
 ```sh
-docker run \
+docker run -d \
   --name roon-server \
   --volume ~/roon/data:/var/roon \
   --volume ~/roon/music:/music:ro \
@@ -63,7 +63,7 @@ docker network create \
 
 ### Run using unprivileged execution mode and macvlan network mode
 ```sh
-docker run \
+docker run -d \
   --name roon-server \
   --publish_all \
   --volume ~/roon/data:/var/roon \
