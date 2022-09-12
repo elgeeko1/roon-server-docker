@@ -45,6 +45,7 @@ docker run -d \
   --volume ~/roon/music:/music:ro \
   --network host \
   --privileged \
+  --restart unless-stopped \
   elgeeko/roon-server
 ```
 
@@ -70,6 +71,7 @@ docker run -d \
   --volume ~/roon/music:/music:ro \
   --network roon \
   --ip 192.168.1.2 \
+  --restart unless-stopped \
   elgeeko/roon-server
 ```
 
