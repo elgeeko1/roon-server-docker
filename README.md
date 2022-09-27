@@ -39,7 +39,7 @@ mkdir -p ~/roon/music
 ## Option 1: Run in least secure mode (easiest)
 Run using privileged execution mode and host network mode:
 ```sh
-docker run -d \
+docker run \
   --name roon-server \
   --volume ~/roon/data:/var/roon \
   --volume ~/roon/music:/music:ro \
@@ -63,7 +63,7 @@ docker network create \
 
 ### Run using unprivileged execution mode and macvlan network mode
 ```sh
-docker run -d \
+docker run \
   --name roon-server \
   --publish_all \
   --volume ~/roon/data:/var/roon \
@@ -83,6 +83,11 @@ See the Dockerfile source below for ports to open. See Docker documentation for
 creating and using a bridged network.
 
 # Additional functionality
+
+### Useful docker flags
+You may optionally want to add the `-d` flag to output to syslog
+instead of the console, and `--restart-unless-stopped` flag to
+restart the container if it fails.
 
 ### Use USB DACs connected to the host
 Add the following arguments to the `docker run` command:  
