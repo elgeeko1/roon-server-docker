@@ -2,34 +2,22 @@
 
 ROON_PACKAGE_URI=${ROON_PACKAGE_URI-"http://download.roonlabs.com/builds/RoonServer_linuxx64.tar.bz2"}
 
+echo Starting RoonServer with user `whoami`
+
 # install Roon if not present
 if [ ! -f /opt/RoonServer/start.sh ]; then
-  echo Downloading Roon from ${ROON_PACKAGE_URI}
-  wget \
-    --show-progress \
-    --tries=2 \
-    -O /tmp/RoonServer_linuxx64.tar.bz2 \
-    ${ROON_PACKAGE_URI}
-  if [ ! $? ]; then
-    echo Error: Unable to download Roon.
+  echo Downloading Roon Server from ${ROON_PACKAGE_URI}
+  wget --progress=bar:force --tries=2 -O - ${ROON_PACKAGE_URI} | tar -xvj --overwrite -C /opt
+  if [ $? != 0 ]; then
+    echo Error: Unable to install Roon Server.
     exit 1
   fi
-
-  echo Extracting Roon
-  tar -xvjf /tmp/RoonServer_linuxx64.tar.bz2 -C /opt
-  if [ ! $? ]; then
-    echo Error: Unable to extract Roon.
-    exit 2
-  fi
-
-  # cleanup
-  rm /tmp/RoonServer_linuxx64.tar.bz2
 fi
 
 echo Verifying Roon installation
 /opt/RoonServer/check.sh
 retval=$?
-if [ ! ${retval} ]; then
+if [ ${retval} != 0 ]; then
   echo Verification of Roon installation failed.
   exit ${retval}
 fi
@@ -43,3 +31,4 @@ roon_start_pid=$!
 trap 'kill -INT ${roon_start_pid}' SIGINT SIGQUIT SIGTERM
 wait "${roon_start_pid}" # block until Roon terminates
 retval=$?
+exit ${retval}
