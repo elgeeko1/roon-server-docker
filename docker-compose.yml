@@ -1,40 +1,49 @@
 version: '3'
 services:
   roon:
-    container_name: roon
+    container_name: roon-server
     image: elgeeko/roon-server:latest
-    network_mode: host # easiest but least secure
     restart: unless-stopped
+    network_mode: host
     privileged: true
     user: roon
-    ports:
-      - "9003:9003/udp"               # multicast
-      - "9100-9200:9100-9200/tcp"     # RAAT
-      - "9001-9002:9001-9002/tcp"     # ?
-      - "9330-9339:9330-9339/tcp"     # ?
-      - "30000-30010:30000-30010/tcp" # Chromecast
-      - "49863:49863/tcp"             # ?
-      - "52667:52667/tcp"             # ?
-      - "52709:52709/tcp"             # ?
-      - "63098-63100:63098-63100/tcp" # ?
     volumes:
       - ~/music:/music:ro # TODO: replace ~/mymusic with your music directory
       - roon-server-data:/opt/RoonServer
       - roon-server-cache:/var/roon
-      - /run/udev:/run/udev:ro
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-    devices:
-      - /dev/bus/usb
-      - /dev/snd
-    cap_add:
-      - SYS_ADMIN
-      - DAC_READ_SEARCH
-    security_opt:
-      - apparmor:unconfined
 
 volumes:
   roon-server-data:
     name: roon-server-data
   roon-server-cache:
     name: roon-server-cache
+
+
+## if running in 'bridge' or 'macvlan' network mode,
+## expose these ports:
+# ports:
+#   - "9003:9003/udp"               # multicast
+#   - "9100-9200:9100-9200/tcp"     # RAAT
+#   - "9001-9002:9001-9002/tcp"     # ?
+#   - "9330-9339:9330-9339/tcp"     # ?
+#   - "30000-30010:30000-30010/tcp" # Chromecast
+#   - "49863:49863/tcp"             # ?
+#   - "52667:52667/tcp"             # ?
+#   - "52709:52709/tcp"             # ?
+#   - "63098-63100:63098-63100/tcp" # ?
+
+## if the roon server will play from an onboard sound card
+# devices:
+#   - /dev/bus/usb
+#   - /dev/snd
+# cap_add:
+#   - SYS_ADMIN
+#   - DAC_READ_SEARCH
+# volumes:
+#   - /run/udev:/run/udev:ro
+
+## try using this if roon is having trouble discovering devices
+# security_opt:
+#   - apparmor:unconfined
