@@ -3,6 +3,7 @@ Roon Server in a docker container.
 
 ### Features
 - Downloads and installs latest Roon Server on first container start
+- Subsequent in-app Roon Server upgrades persist
 - Audio input from a local music library
 - Audio input from Tidal or Qobuz
 - Audio output to USB DAC devices connected to the Roon Server host
