@@ -1,57 +1,56 @@
 ##################
 ## base stage
 ##################
-FROM ubuntu:jammy AS BASE
+FROM ubuntu:24.04 AS base
 
 USER root
 
 # Preconfigure debconf for non-interactive installation - otherwise complains about terminal
 # Avoid ERROR: invoke-rc.d: policy-rc.d denied execution of start.
 ARG DEBIAN_FRONTEND=noninteractive
-ARG DISPLAY localhost:0.0
+ARG DISPLAY=localhost:0.0
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
 RUN dpkg-divert --local --rename --add /sbin/initctl
 RUN ln -sf /bin/true /sbin/initctl
 RUN echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d
 
 # configure apt
-RUN apt-get update -q
-RUN apt-get install --no-install-recommends -y -q apt-utils 2>&1 \
+RUN apt update -q
+RUN apt install --no-install-recommends -y -q apt-utils 2>&1 \
 	| grep -v "debconf: delaying package configuration"
-RUN apt-get install --no-install-recommends -y -q ca-certificates
+RUN apt install --no-install-recommends -y -q ca-certificates
 
 # install prerequisites
 # Roon prerequisites:
-#  - Roon requirements: ffmpeg libasound2 libicu70
+#  - Roon requirements: ffmpeg libasound2
 #  - Roon access samba mounts: cifs-utils
 #  - Roon play to local audio device: alsa
 #  - Query USB devices inside Docker container: usbutils udev
-RUN apt-get install --no-install-recommends -y -q ffmpeg
-RUN apt-get install --no-install-recommends -y -q libasound2
-RUN apt-get install --no-install-recommends -y -q libicu70
-RUN apt-get install --no-install-recommends -y -q cifs-utils
-RUN apt-get install --no-install-recommends -y -q alsa
-RUN apt-get install --no-install-recommends -y -q usbutils
-RUN apt-get install --no-install-recommends -y -q udev
+RUN apt install --no-install-recommends -y -q ffmpeg
+RUN apt install --no-install-recommends -y -q libasound2-dev
+RUN apt install --no-install-recommends -y -q cifs-utils
+RUN apt install --no-install-recommends -y -q alsa
+RUN apt install --no-install-recommends -y -q usbutils
+RUN apt install --no-install-recommends -y -q udev
 # app prerequisites
 #  - Docker healthcheck: curl
 #  - App entrypoint downloads Roon: wget bzip2
 #  - set timezone: tzdata
-RUN apt-get install --no-install-recommends -y -q curl
-RUN apt-get install --no-install-recommends -y -q wget
-RUN apt-get install --no-install-recommends -y -q bzip2
-RUN apt-get install --no-install-recommends -y -q tzdata
+RUN apt install --no-install-recommends -y -q curl
+RUN apt install --no-install-recommends -y -q wget
+RUN apt install --no-install-recommends -y -q bzip2
+RUN apt install --no-install-recommends -y -q tzdata
 
 # apt cleanup
-RUN apt-get autoremove -y -q
-RUN apt-get -y -q clean
+RUN apt autoremove -y -q
+RUN apt clean -y -q
 RUN rm -rf /var/lib/apt/lists/*
 
 ####################
 ## application stage
 ####################
 FROM scratch
-COPY --from=BASE / /
+COPY --from=base / /
 LABEL maintainer="elgeeko1"
 LABEL source="https://github.com/elgeeko1/roon-server-docker"
 
@@ -104,36 +103,44 @@ RUN echo "${TZ}" > /etc/timezone \
 # accessing network shares that are not public,
 # or if the RoonServer build is mapped in from
 # the host filesystem.
-ARG CONTAINER_USER=roon
+ARG CONTAINER_USER=ubuntu
 ARG CONTAINER_USER_UID=1000
-RUN adduser --disabled-password --gecos "" --uid ${CONTAINER_USER_UID} ${CONTAINER_USER}
-
-# add container user to audio group
-RUN usermod -a -G audio ${CONTAINER_USER}
+RUN if [ "${CONTAINER_USER}" != "ubuntu" ]; \
+	then useradd \
+		--uid ${CONTAINER_USER_UID} \
+		--user-group \
+		${CONTAINER_USER}; \
+	fi
+RUN usermod -aG audio ${CONTAINER_USER}
 
 # copy application files
 COPY app/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN  chmod +x /entrypoint.sh
 COPY README.md /README.md
 
 # configure filesystem
 ## map a volume to this location to retain Roon Server data
 RUN mkdir -p /opt/RoonServer \
-	&& chown ${CONTAINER_USER} /opt/RoonServer \
-	&& chgrp ${CONTAINER_USER} /opt/RoonServer
+	&& chown ${CONTAINER_USER}:${CONTAINER_USER} /opt/RoonServer
 ## map a volume to this location to retain Roon Server cache
 RUN mkdir -p /var/roon \
-		&& chown ${CONTAINER_USER} /var/roon \
-		&& chgrp ${CONTAINER_USER} /var/roon
-# volume for local music library
-VOLUME ["/music"]
+	&& chown ${CONTAINER_USER}:${CONTAINER_USER} /var/roon
+
+# create /music directory (users may override with a volume)
+RUN mkdir -p /music \
+	&& chown ${CONTAINER_USER}:${CONTAINER_USER} /music \
+	&& chmod og+r /music
 
 USER ${CONTAINER_USER}
 
 # entrypoint
 # set environment variables consumed by RoonServer
 # startup script
-ENV DISPLAY localhost:0.0
+ARG DISPLAY=localhost:0.0
+ENV DISPLAY=${DISPLAY}
 ENV ROON_DATAROOT=/var/roon
 ENV ROON_ID_DIR=/var/roon
+
 ENTRYPOINT ["/entrypoint.sh"]
+HEALTHCHECK --interval=1m --timeout=1s \
+	CMD curl -f http://localhost:9330/display

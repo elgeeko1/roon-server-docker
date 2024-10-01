@@ -1,14 +1,15 @@
-version: '3'
 services:
   roon:
     container_name: roon-server
-    image: elgeeko/roon-server:latest
+    build:
+      context: .
+    image: roon-server:latest
     restart: unless-stopped
     network_mode: host
     privileged: true
-    user: roon
+    user: ubuntu
     volumes:
-      - ~/music:/music:ro # TODO: replace ~/mymusic with your music directory
+      - ~/music:/music:ro # TODO: replace ~/music with your music directory
       - roon-server-data:/opt/RoonServer
       - roon-server-cache:/var/roon
       - /etc/localtime:/etc/localtime:ro
