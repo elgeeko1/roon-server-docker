@@ -1,4 +1,4 @@
-# Roon Sever in Docker
+# Roon Server in Docker
 Roon Server in a docker container.
 
 ## Features
