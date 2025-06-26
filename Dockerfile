@@ -1,146 +1,143 @@
 ##################
 ## base stage
 ##################
-FROM ubuntu:24.04 AS base
+ARG UBUNTU_VERSION=24.04
+FROM ubuntu:${UBUNTU_VERSION} AS base
 
-USER root
-
-# Preconfigure debconf for non-interactive installation - otherwise complains about terminal
-# Avoid ERROR: invoke-rc.d: policy-rc.d denied execution of start.
+# Build arguments
 ARG DEBIAN_FRONTEND=noninteractive
-ARG DISPLAY=localhost:0.0
-RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-RUN dpkg-divert --local --rename --add /sbin/initctl
-RUN ln -sf /bin/true /sbin/initctl
-RUN echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d
+ARG TZ="Europe/Amsterdam"
 
-# configure apt
-RUN apt update -q
-RUN apt install --no-install-recommends -y -q apt-utils 2>&1 \
-	| grep -v "debconf: delaying package configuration"
-RUN apt install --no-install-recommends -y -q ca-certificates
-
-# install prerequisites
-# Roon prerequisites:
-#  - Roon requirements: ffmpeg libasound2
-#  - Roon access samba mounts: cifs-utils
-#  - Roon play to local audio device: alsa
-#  - Query USB devices inside Docker container: usbutils udev
-RUN apt install --no-install-recommends -y -q ffmpeg
-RUN apt install --no-install-recommends -y -q libasound2-dev
-RUN apt install --no-install-recommends -y -q cifs-utils
-RUN apt install --no-install-recommends -y -q alsa
-RUN apt install --no-install-recommends -y -q usbutils
-RUN apt install --no-install-recommends -y -q udev
-# app prerequisites
-#  - Docker healthcheck: curl
-#  - App entrypoint downloads Roon: wget bzip2
-#  - set timezone: tzdata
-RUN apt install --no-install-recommends -y -q curl
-RUN apt install --no-install-recommends -y -q wget
-RUN apt install --no-install-recommends -y -q bzip2
-RUN apt install --no-install-recommends -y -q tzdata
-
-# apt cleanup
-RUN apt autoremove -y -q
-RUN apt clean -y -q
-RUN rm -rf /var/lib/apt/lists/*
-
-####################
-## application stage
-####################
-FROM scratch
-COPY --from=base / /
-LABEL maintainer="elgeeko1"
-LABEL source="https://github.com/elgeeko1/roon-server-docker"
-
-# Roon documented ports
-#  - multicast (discovery?)
-EXPOSE 9003/udp
-#  - Roon Display
-EXPOSE 9100/tcp
-#  - RAAT
-EXPOSE 9100-9200/tcp
-#  - Roon events from cloud to core (websocket?)
-EXPOSE 9200/tcp
-# Chromecast devices
-EXPOSE 30000-30010/tcp
-
-# See https://github.com/elgeeko1/roon-server-docker/issues/5
-# https://community.roonlabs.com/t/what-are-the-new-ports-that-roon-server-needs-open-in-the-firewall/186023/16
-EXPOSE 9330-9339/tcp
-
-# ports experimentally determined; or, documented
-# somewhere and source forgotten; or, commented
-# in a forum without explanation. I swear I know
-# what these ports do but I've run out of space
-# in the margin to write the solution. Either way
-# there are no other services running in the
-# container that should bind to these ports,
-# so exposing them shouldn't pose a security risk.
-EXPOSE 9001-9002/tcp
-EXPOSE 49863/tcp
-EXPOSE 52667/tcp
-EXPOSE 52709/tcp
-EXPOSE 63098-63100/tcp
-
-USER root
-
-# change to match your local zone.
-# matching container to host timezones synchronizes
-# last.fm posts, filesystem write times, and user
-# expectations for times shown in the Roon client.
-ARG TZ="America/Los_Angeles"
+# Set timezone early to avoid interactive prompts
 ENV TZ=${TZ}
-RUN echo "${TZ}" > /etc/timezone \
-	&& ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime \
-	&& dpkg-reconfigure -f noninteractive tzdata
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# non-root container user.
-# you may want to randomize the UID to prevent
-# accidental collisions with the host filesystem;
-# however, this may prevent the container from
-# accessing network shares that are not public,
-# or if the RoonServer build is mapped in from
-# the host filesystem.
-ARG CONTAINER_USER=ubuntu
-ARG CONTAINER_USER_UID=1000
-RUN if [ "${CONTAINER_USER}" != "ubuntu" ]; \
-	then useradd \
-		--uid ${CONTAINER_USER_UID} \
-		--user-group \
-		${CONTAINER_USER}; \
-	fi
-RUN usermod -aG audio ${CONTAINER_USER}
+# Configure apt for non-interactive installation
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections && \
+    dpkg-divert --local --rename --add /sbin/initctl && \
+    ln -sf /bin/true /sbin/initctl && \
+    echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d && \
+    chmod +x /usr/sbin/policy-rc.d
 
-# copy application files
+# Update package lists and install essential packages in single layer
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+        ca-certificates \
+        apt-utils && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+##################
+## Dependencies stage
+##################
+FROM base AS dependencies
+
+# Install all dependencies in single optimized layer
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+        # Roon core requirements
+        ffmpeg \
+        libasound2t64 \
+        libasound2-data \
+        libasound2-plugins \
+        # Network and filesystem access
+        cifs-utils \
+        # USB and audio device access
+        udev \
+        # Application utilities
+        curl \
+        wget \
+        bzip2 \
+        tzdata \
+        # Process management
+        procps \
+        # User management requirements
+        passwd \
+        sudo \
+        gosu && \
+    # Clean up in same layer to reduce image size
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+##################
+## Runtime stage
+##################
+FROM dependencies AS runtime
+
+LABEL maintainer="elgeeko1" \
+      source="https://github.com/elgeeko1/roon-server-docker" \
+      org.opencontainers.image.title="Roon Server" \
+      org.opencontainers.image.description="Roon Music Server in Docker" \
+      org.opencontainers.image.source="https://github.com/elgeeko1/roon-server-docker"
+
+# Create abc user/group (LinuxServer standard)
+RUN groupadd -g 911 abc && \
+    useradd -u 911 -g 911 -d /config -s /bin/bash abc && \
+    usermod -G users abc && \
+    usermod -aG audio abc
+
+# Create directories that need proper ownership
+RUN mkdir -p \
+        /opt/RoonServer \
+        /var/roon \
+        /music \
+        /config \
+        /logs \
+        /app && \
+    chown -R abc:abc \
+        /opt/RoonServer \
+        /var/roon \
+        /music \
+        /config \
+        /logs \
+        /app
+
+# Copy application files
 COPY app/entrypoint.sh /entrypoint.sh
-RUN  chmod +x /entrypoint.sh
 COPY README.md /README.md
 
-# configure filesystem
-## map a volume to this location to retain Roon Server data
-RUN mkdir -p /opt/RoonServer \
-	&& chown ${CONTAINER_USER}:${CONTAINER_USER} /opt/RoonServer
-## map a volume to this location to retain Roon Server cache
-RUN mkdir -p /var/roon \
-	&& chown ${CONTAINER_USER}:${CONTAINER_USER} /var/roon
+# Make scripts executable
+RUN chmod +x /entrypoint.sh
 
-# create /music directory (users may override with a volume)
-RUN mkdir -p /music \
-	&& chown ${CONTAINER_USER}:${CONTAINER_USER} /music \
-	&& chmod og+r /music
+# Set runtime environment variables
+ENV HOME="/config" \
+    ROON_DATAROOT="/opt/RoonServer" \
+    ROON_ID_DIR="/opt/RoonServer" \
+    DISPLAY=":0.0" \
+    PATH="/opt/RoonServer:${PATH}" \
+    PUID=911 \
+    PGID=911
 
-USER ${CONTAINER_USER}
+# Expose ports in logical groups
+# Core Roon services
+EXPOSE 9330-9339/tcp
+# RAAT (Roon Advanced Audio Transport)
+EXPOSE 9003/udp 9100-9200/tcp
+# Discovery and control
+EXPOSE 9001-9002/tcp 9200/tcp
+# Chromecast support
+EXPOSE 30000-30010/tcp
+# Additional documented ports
+EXPOSE 49863/tcp 52667/tcp 52709/tcp 63098-63100/tcp
 
-# entrypoint
-# set environment variables consumed by RoonServer
-# startup script
-ARG DISPLAY=localhost:0.0
-ENV DISPLAY=${DISPLAY}
-ENV ROON_DATAROOT=/var/roon
-ENV ROON_ID_DIR=/var/roon
+# Health check using specific Roon endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:9330/display || exit 1
 
+# Use entrypoint (will handle PUID/PGID setup)
 ENTRYPOINT ["/entrypoint.sh"]
-HEALTHCHECK --interval=1m --timeout=1s \
-	CMD curl -f http://localhost:9330/display
+
+##################
+## Development stage (optional)
+##################
+FROM runtime AS development
+
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+        vim \
+        htop \
+        strace \
+        net-tools && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* 
