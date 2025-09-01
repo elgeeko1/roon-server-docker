@@ -15,17 +15,60 @@ Roon Server in a Docker container.
 - Persistent cache
 - Secure execution (unprivileged execution, macvlan network)
 
-## Configure the Roon Host
+## Getting Started
 
-### Install host prerequisites
+The following steps will work in most configurations and supports all features.
 
-Install the following audio packages into the host that will run Roon.
+Install audio packages into the host:
 
 ```bash
 apt install alsa-utils libasound2 libasound2-data libasound2-plugins
 ```
 
-### Create persistent data volumes and paths
+Create persistent docker volumes and a directory for local audio files:
+
+```bash
+docker volume create roon-server-data
+docker volume create roon-server-cache
+mkdir -p ~/roon/music
+```
+
+Run the docker container:
+
+```bash
+AUDIO_GID=$(getent group audio | cut -d: -f3)
+docker run \
+  --name roon-server \
+  --detach \
+  --volume roon-server-data:/opt/RoonServer \
+  --volume roon-server-cache:/var/roon \
+  --volume ~/roon/music:/music:ro \
+  --network host \
+  --restart unless-stopped \
+  --volume /run/udev:/run/udev:ro \
+  --device /dev/bus/usb \
+  --device /dev/snd \
+  --group-add "${AUDIO_GID:-29}" \
+  elgeeko/roon-server
+```
+
+View logs:
+
+```bash
+docker logs -f roon-server
+```
+
+If your devices can discover the Roon Server and your audio outputs are visible, you're good to go!
+What follows is a more detailed guide for advanced setups.
+
+## Configure the Host
+
+Install the following audio packages into the host. These packages are required for a docker container
+to access local audio devices.
+
+```bash
+apt install alsa-utils libasound2 libasound2-data libasound2-plugins
+```
 
 Create persistent docker volumes to retain the binary installation of
 Roon Server and its configuration across restarts of the service.
@@ -54,7 +97,9 @@ There are three ways to configure the Roon Docker container, each with different
 
 This is the simplest way to run the docker container. Run using privileged execution mode and host network mode:
 
-Without support for sound output from devices local to the roon server (USB, built-in):
+#### Run host container (no support for local audio)
+
+Run the host container without support for sound output from devices local to the roon server (USB, built-in):
 
 ```bash
 docker run \
@@ -68,7 +113,9 @@ docker run \
   elgeeko/roon-server
 ```
 
-With support for USB DACs or other sound devices connected to the Roon server:
+#### Run host container (with support for local audio)
+
+Run the host container with support for USB DACs or other sound devices connected to the Roon server:
 
 ```bash
 AUDIO_GID=$(getent group audio | cut -d: -f3)
@@ -87,7 +134,7 @@ docker run \
   elgeeko/roon-server
 ```
 
-View logs:
+#### View logs
 
 ```bash
 docker logs -f roon-server
@@ -101,7 +148,7 @@ Run in an unprivileged container using macvlan network mode. Replace the subnet,
 > Macvlan generally does not work on wifi networks, and wired ethernet is required. This is a limitation of how
 > most wifi adapters handle MAC addresses and frames.
 
-Create docker macvlan network:
+#### Create docker macvlan network
 
 ```bash
 docker network create \
@@ -112,9 +159,9 @@ docker network create \
   roon
 ```
 
-Run the container with the macvlan network.
+#### Run the macvlan container (no support for local audio)
 
-Without support for sound output from devices local to the roon server (USB, built-in):
+Run the macvlan container with support for sound output from devices local to the roon server (USB, built-in):
 
 ```bash
 docker run \
@@ -129,7 +176,9 @@ docker run \
   elgeeko/roon-server
 ```
 
-With support for USB DACs or other sound devices connected to the Roon server:
+#### Run the macvlan container (w/ support for local audio)
+
+Run the macvlan container with support for USB DACs or other sound devices connected to the Roon server:
 
 ```bash
 AUDIO_GID=$(getent group audio | cut -d: -f3)
