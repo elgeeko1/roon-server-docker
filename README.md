@@ -8,10 +8,10 @@ Roon Server in a Docker container.
 - Subsequent in-app Roon Server upgrades persist
 - Audio input from a local music library
 - Audio input from streaming services such as Tidal or Qobuz
-- Audio output to USB DAC devices connected to the Roon Server host
+- Audio output to USB DAC devices connected to the Roon Server
 - Audio output to RAAT devices such as the Roon app, Roon Bridge, RoPieee, etc.
-- Audio output to local audio output on the Roon Server host
-- Local timezone support for accurate last.fm tagging
+- Audio output to audio peripherals on the Roon Server
+- Local timezone support (helpful for accurate last.fm tagging)
 - Persistent cache
 - Secure execution (unprivileged execution, macvlan network)
 
