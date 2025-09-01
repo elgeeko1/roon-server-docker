@@ -26,7 +26,7 @@ fi
 #
 # since we're invoking from a script, we need to
 # catch signals to terminate Roon nicely
-/opt/RoonServer/start.sh &
+/opt/RoonServer/start.sh --ulimit nofile=8192 &
 roon_start_pid=$!
 trap 'kill -INT ${roon_start_pid}' SIGINT SIGQUIT SIGTERM
 wait "${roon_start_pid}" # block until Roon terminates

@@ -1,4 +1,5 @@
 # Roon Server in Docker
+
 Roon Server in a docker container.
 
 ## Features
@@ -6,7 +7,7 @@ Roon Server in a docker container.
 - Downloads and installs latest Roon Server on first container start
 - Subsequent in-app Roon Server upgrades persist
 - Audio input from a local music library
-- Audio input from Tidal or Qobuz
+- Audio input from streaming services such as Tidal or Qobuz
 - Audio output to USB DAC devices connected to the Roon Server host
 - Audio output to RAAT devices such as the Roon app, Roon Bridge, RoPieee, etc.
 - Audio output to local audio output on the Roon Server host
@@ -36,8 +37,9 @@ docker volume create roon-server-cache
 ```
 
 Locate (or create) a folder to host your local music library. This step is optional and only needed if you have a local music library.
-  - This folder can also be used as a Samba or NFS share for network access to your library.
-  - This folder is optional. Omit if you plan to exclusively stream music.
+
+- This folder can also be used as a Samba or NFS share for network access to your library.
+- This folder is optional. Omit if you plan to exclusively stream music.
 
 Example:
 
@@ -67,6 +69,10 @@ docker run \
 ### Run in macvlan mode (more secure)
 
 Run in an unprivileged container using macvlan network mode. Replace the subnet, gateway, IP address, and primary ethernet adapter to match your local network.
+
+> [!NOTE]
+> Macvlan generally does not work on wifi networks, and wired ethernet is required. This is a limitation of how
+> most wifi adapters handle MAC addresses and frames.
 
 #### Create docker macvlan network
 
@@ -113,9 +119,9 @@ restart the container if it fails.
 ### Use USB DACs connected to the host
 
 Add the following arguments to the `docker run` command:  
-`--volume /run/udev:/run/udev:ro` - allow Roon to enumerate USB devices  
-`--device /dev/bus/usb` - allow Roon to access USB devices (`/dev/usbmon0` for Fedora)   
-`--device /dev/snd` - allow Roon to access ALSA devices   
+`--volume /run/udev:/run/udev:ro` - allow Roon see USB device changes (receives udev events)
+`--device /dev/bus/usb` - allow Roon to access USB devices (`/dev/usbmon0` for Fedora)
+`--device /dev/snd` - allow Roon to access ALSA devices
 `--group-add $(getent group audio | cut -d: -f3)` - add container user to host 'audio' group
 
 ### Synchronize filesystem and last.fm timestamps with your local timezone
@@ -132,7 +138,7 @@ connected, disconnecting and reconnecting is reflected in Roon.
 - Mounting network drives via cisfs may require root access. The workaround is to
 run the container with the `user=root` option in the `docker run` command.
 - Fedora CoreOS sets a system paramenter `ulimit` to a smaller value than Roon
-requires. Add the following argument to the `docker run` command:   
+requires. Add the following argument to the `docker run` command:
 `--ulimit nofile=8192`
 
 ## Building from the Dockerfile
@@ -142,5 +148,5 @@ requires. Add the following argument to the `docker run` command:
 ## Resources
 
 - [elgeeko/roon-server](https://hub.docker.com/repository/docker/elgeeko/roon-server) on Docker Hub
-- Ansible script to deploy the Roon Server image, as well as an optional Samba server for network sharing of a local music library: https://github.com/elgeeko1/elgeeko1-roon-server-ansible
-- Roon Labs Linux install instructions: https://help.roonlabs.com/portal/en/kb/articles/linux-install
+- Ansible script to deploy the Roon Server image, as well as an optional Samba server for network sharing of a local music library: [elgeeko1/elgeeko1-roon-server-ansible](https://github.com/elgeeko1/elgeeko1-roon-server-ansible)
+- [Roon Labs Linux install instructions](https://help.roonlabs.com/portal/en/kb/articles/linux-install)
