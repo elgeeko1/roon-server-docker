@@ -176,7 +176,7 @@ docker run \
   elgeeko/roon-server
 ```
 
-#### Run the macvlan container (w/ support for local audio)
+#### Run the macvlan container (with support for local audio)
 
 Run the macvlan container with support for USB DACs or other sound devices connected to the Roon server:
 
@@ -215,31 +215,27 @@ See the Dockerfile source for ports to open. See Docker documentation for creati
 If you're having network connectivity issues, issues discovering other devices, or issues finding your roon server,
 try more permissive docker settings. Add one or more of the following to diagnose:
 
-- `--cap-add SYS_ADMIN`: adds broad admin capabilities (mount/namespace/cgroup ops); helps if the container needs OS-level actions blocked by default confinement.
-- `--security-opt apparmor:unconfined`: disables the AppArmor profile; helps when AppArmor denies access to devices/files (e.g., `/dev/snd`, `/run/udev`) or certain syscalls.
-- `--privileged`: grants all capabilities and device access, bypassing LSM confinement; helps confirm isolation is the blocker (USB/udev/network), but use only as a last-resort diagnostic.
+- `--cap-add SYS_ADMIN` - adds broad admin capabilities (mount/namespace/cgroup ops); helps if the container needs OS-level actions blocked by default confinement.
+- `--security-opt apparmor:unconfined` - disables the AppArmor profile; helps when AppArmor denies access to devices/files (e.g., `/dev/snd`, `/run/udev`) or certain syscalls.
+- `--privileged` - grants all capabilities and device access, bypassing LSM confinement; helps confirm isolation is the blocker (USB/udev/network), but use only as a last-resort diagnostic.
 
 ## Additional functionality
 
 ### Use USB DACs connected to the host
 
 Add the following arguments to the `docker run` command:  
-`--volume /run/udev:/run/udev:ro` - allow Roon see USB device changes (udev events)
-`--device /dev/bus/usb` - allow Roon to access USB devices
-`--device /dev/snd` - allow Roon to access ALSA devices
-`--group-add $(getent group audio | cut -d: -f3)` - add container user to host 'audio' group
+
+- `--volume /run/udev:/run/udev:ro` - allow Roon see USB device changes (udev events)
+- `--device /dev/bus/usb` - allow Roon to access USB devices
+- `--device /dev/snd` - allow Roon to access ALSA devices
+- `--group-add $(getent group audio | cut -d: -f3)` - add container user to host 'audio' group
 
 ### Synchronize filesystem and last.fm timestamps with your local timezone
 
 Add the following arguments to the `docker run` command:
-`--env TZ=America/Los_Angeles` - set tzdata timezone (substitute yours)
-`--volume /etc/localtime:/etc/localtime:ro` - map local system clock to container clock  
 
-### Useful docker flags
-
-- `--detached` – run detached (view logs with `docker logs -f roon-server`)
-- Optional logging limits: `--log-opt max-size=10m --log-opt max-file=3`
-# For syslog: `--log-driver syslog --log-opt syslog-address=udp://localhost:514`
+- `--env TZ=America/Los_Angeles` - set tzdata timezone (substitute yours)
+- `--volume /etc/localtime:/etc/localtime:ro` - map local system clock to container clock  
 
 ## Known Issues
 
