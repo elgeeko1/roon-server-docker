@@ -18,14 +18,10 @@ services:
       - ${HOME}/music:/music:ro # TODO: replace ~/music with your music directory
       - roon-server-data:/opt/RoonServer
       - roon-server-cache:/var/roon
-      - /run/udev:/run/udev:ro
       - /etc/localtime:/etc/localtime:ro
     stop_grace_period: 45s
     logging:
       driver: local
-    devices:
-      - /dev/bus/usb
-      - /dev/snd
     # # if using bridged network mode:
     # ports:
     #   - "9003:9003/udp"               # multicast
@@ -40,9 +36,18 @@ volumes:
   roon-server-cache:
     name: roon-server-cache
 
+## if using audio directly connected to the Roon server, add
+# devices:
+#   - /dev/bus/usb
+#   - /dev/snd
+# volumes:
+#   - /run/udev:/run/udev:ro
+
 ## try using this if roon is having trouble discovering devices
 # cap_add:
 #   - SYS_ADMIN
-#   - DAC_READ_SEARCH
 # security_opt:
 #   - apparmor:unconfined
+
+## try this if all else fails
+# privileged: true
