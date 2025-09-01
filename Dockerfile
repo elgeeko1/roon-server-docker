@@ -19,9 +19,9 @@ USER root
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=localhost:0.0
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-RUN dpkg-divert --local --rename --add /sbin/initctl
-RUN ln -sf /bin/true /sbin/initctl
-RUN echo -e "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d
+# RUN dpkg-divert --local --rename --add /sbin/initctl
+# RUN ln -sf /bin/true /sbin/initctl
+# RUN echo -e "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d
 
 # configure python
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -33,12 +33,12 @@ RUN apt install --no-install-recommends -y -q ca-certificates
 
 # install prerequisites
 # Roon prerequisites:
-#  - Roon requirements: ffmpeg libasound2
+#  - Roon requirements: ffmpeg libasound2-dev
 #  - Roon access samba mounts: cifs-utils
 #  - Roon play to local audio device: alsa
 #  - Query USB devices inside Docker container: usbutils udev
 RUN apt install --no-install-recommends -y -q ffmpeg
-RUN apt install --no-install-recommends -y -q libasound2
+RUN apt install --no-install-recommends -y -q libasound2-dev
 RUN apt install --no-install-recommends -y -q cifs-utils
 RUN apt install --no-install-recommends -y -q alsa
 RUN apt install --no-install-recommends -y -q usbutils
