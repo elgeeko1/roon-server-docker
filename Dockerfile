@@ -19,9 +19,6 @@ USER root
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=localhost:0.0
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-# RUN dpkg-divert --local --rename --add /sbin/initctl
-# RUN ln -sf /bin/true /sbin/initctl
-# RUN echo -e "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d
 
 # configure python
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -36,20 +33,15 @@ RUN apt install --no-install-recommends -y -q ca-certificates
 #  - Roon requirements: ffmpeg libasound2-dev
 #  - Roon access samba mounts: cifs-utils
 #  - Roon play to local audio device: alsa
-#  - Query USB devices inside Docker container: usbutils udev
-RUN apt install --no-install-recommends -y -q ffmpeg
-RUN apt install --no-install-recommends -y -q libasound2-dev
+#  - Query USB devices inside Docker container: usbutils udev libudev1
+RUN apt install --no-install-recommends -y -q ffmpeg libasound2-dev alsa
 RUN apt install --no-install-recommends -y -q cifs-utils
-RUN apt install --no-install-recommends -y -q alsa
-RUN apt install --no-install-recommends -y -q usbutils
-RUN apt install --no-install-recommends -y -q udev libudev1
+RUN apt install --no-install-recommends -y -q usbutils udev libudev1
 # app prerequisites
 #  - Docker healthcheck: curl
 #  - App entrypoint downloads Roon: wget bzip2
 #  - set timezone: tzdata
-RUN apt install --no-install-recommends -y -q curl
-RUN apt install --no-install-recommends -y -q wget
-RUN apt install --no-install-recommends -y -q bzip2
+RUN apt install --no-install-recommends -y -q curl wget bzip2
 RUN apt install --no-install-recommends -y -q tzdata
 
 # apt cleanup
@@ -127,18 +119,18 @@ RUN usermod -aG audio ${CONTAINER_USER}
 COPY --chmod=0755 app/entrypoint.sh /entrypoint.sh
 COPY README.md /README.md
 
-# # configure filesystem
-# ## map a volume to this location to retain Roon Server data
-# RUN mkdir -p /opt/RoonServer \
-# 	&& chown ${CONTAINER_USER}:${CONTAINER_USER} /opt/RoonServer
-# ## map a volume to this location to retain Roon Server cache
-# RUN mkdir -p /var/roon \
-# 	&& chown ${CONTAINER_USER}:${CONTAINER_USER} /var/roon
+# configure filesystem
+## map a volume to this location to retain Roon Server data
+RUN mkdir -p /opt/RoonServer \
+	&& chown ${CONTAINER_USER}:${CONTAINER_USER} /opt/RoonServer
+## map a volume to this location to retain Roon Server cache
+RUN mkdir -p /var/roon \
+	&& chown ${CONTAINER_USER}:${CONTAINER_USER} /var/roon
 
-# # create /music directory (users may override with a volume)
-# RUN mkdir -p /music \
-# 	&& chown ${CONTAINER_USER}:${CONTAINER_USER} /music \
-# 	&& chmod og+r /music
+# create /music directory (users may override with a volume)
+RUN mkdir -p /music \
+	&& chown ${CONTAINER_USER}:${CONTAINER_USER} /music \
+	&& chmod og+r /music
 
 USER ${CONTAINER_USER}
 
