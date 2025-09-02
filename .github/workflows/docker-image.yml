@@ -64,7 +64,7 @@ jobs:
           context: .
           file: ./Dockerfile
           pull: true
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name == 'release' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
