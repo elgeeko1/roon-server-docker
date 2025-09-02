@@ -73,20 +73,20 @@ jobs:
       - name: Validate docker-compose
         run: docker compose -f docker-compose.yml config
 
-# update README on release publish
-dockerhub-readme:
-    if: github.event_name == 'release'
-    needs: build-and-push
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # update README on release publish
+  dockerhub-readme:
+      if: github.event_name == 'release'
+      needs: build-and-push
+      runs-on: ubuntu-24.04
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
 
-      - name: Update Docker Hub README
-        uses: peter-evans/dockerhub-description@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
-          readme-filepath: ./README.md
-          short-description: ${{ github.event.repository.description }}
+        - name: Update Docker Hub README
+          uses: peter-evans/dockerhub-description@v3
+          with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+            repository: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
+            readme-filepath: ./README.md
+            short-description: ${{ github.event.repository.description }}
