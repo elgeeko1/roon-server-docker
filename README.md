@@ -59,43 +59,15 @@ docker logs -f roon-server
 ```
 
 If your devices can discover the Roon Server and your audio outputs are visible, you're good to go!
-What follows is a more detailed guide for advanced setups.
+What follows is a more detailed guide for advanced setups or customization.
 
-## Configure the Host
-
-Install the following audio packages into the host. These packages are required for a docker container
-to access local audio devices.
-
-```bash
-apt install alsa-utils libasound2 libasound2-data libasound2-plugins
-```
-
-Create persistent docker volumes to retain the binary installation of
-Roon Server and its configuration across restarts of the service.
-
-```bash
-docker volume create roon-server-data
-docker volume create roon-server-cache
-```
-
-Locate (or create) a folder to host your local music library. This step is optional and only needed if you have a local music library.
-
-- This folder can also be used as a Samba or NFS share for network access to your library.
-- This folder is optional. Omit if you plan to exclusively stream music.
-
-Example:
-
-```bash
-mkdir -p ~/roon/music
-```
-
-## Run Roon
+## Run Options
 
 There are three ways to configure the Roon Docker container, each with different security levels. The first option is the easiest and simplest and should work for most users.
 
 ### Host network - least secure mode (easiest)
 
-This is the simplest way to run the docker container. Run using privileged execution mode and host network mode:
+This is the simplest way to run the docker container. Options are to run with or without support for local audio devices.
 
 #### Run host container (no support for local audio)
 
@@ -219,7 +191,7 @@ try more permissive docker settings. Add one or more of the following to diagnos
 - `--security-opt apparmor:unconfined` - disables the AppArmor profile; helps when AppArmor denies access to devices/files (e.g., `/dev/snd`, `/run/udev`) or certain syscalls.
 - `--privileged` - grants all capabilities and device access, bypassing LSM confinement; helps confirm isolation is the blocker (USB/udev/network), but use only as a last-resort diagnostic.
 
-## Additional functionality
+## Feature Details
 
 ### Use USB DACs connected to the host
 
@@ -235,7 +207,7 @@ Add the following arguments to the `docker run` command:
 Add the following arguments to the `docker run` command:
 
 - `--env TZ=America/Los_Angeles` - set tzdata timezone (substitute yours)
-- `--volume /etc/localtime:/etc/localtime:ro` - map local system clock to container clock  
+- `--volume /etc/localtime:/etc/localtime:ro` - map local system clock to container clock
 
 ## Known Issues
 
@@ -248,12 +220,31 @@ run the container with the `user=root` option in the `docker run` command.
 requires. Add the following argument to the `docker run` command:
 `--ulimit nofile=8192`
 
+## Ports Used
+
+The ports used by Roon are not well-documented. The following ports are documented in forums:
+
+- `9003/udp` - multicast / discovery.
+- `9093/udp` - reported by some users as required for discovery.
+- `9100-9200/tcp` - Roon API and RAAT server. See [Roon API Connecton Refused Error](https://community.roonlabs.com/t/roon-api-on-build-880-connection-refused-error/181619/3).
+- `30000-30010/tcp` - Support for discovery from Chromecast devices.
+- `55000/tcp` - Roon Arc (default, changeable by the user).
+
 ## Building from the Dockerfile
 
-`docker build .`
+```bash
+docker build .
+```
 
 ## Resources
 
 - [elgeeko/roon-server](https://hub.docker.com/repository/docker/elgeeko/roon-server) on Docker Hub
+- [elgeeko1/roon-server-docker](https://github.com/elgeeko1/roon-server-docker) on Github
 - Ansible script to deploy the Roon Server image, as well as an optional Samba server for network sharing of a local music library: [elgeeko1/elgeeko1-roon-server-ansible](https://github.com/elgeeko1/elgeeko1-roon-server-ansible)
 - [Roon Labs Linux install instructions](https://help.roonlabs.com/portal/en/kb/articles/linux-install)
+
+### Related projects
+
+- [elgeeko/roon-bridge](https://hub.docker.com/repository/docker/elgeeko/roon-bridge) on Docker Hub
+- [elgeeko1/roon-bridge-docker](https://github.com/elgeeko1/roon-bridge-docker) on Github
+- Ansible script to deploy the Roon Bridge image: https://github.com/elgeeko1/elgeeko1-roon-bridge-ansible

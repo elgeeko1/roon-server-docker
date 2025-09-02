@@ -82,7 +82,7 @@ EXPOSE 9093/udp
 EXPOSE 9330-9339/tcp
 
 # Roon Arc
-EXPOSE 55000
+EXPOSE 55000/tcp
 
 VOLUME ["/opt/RoonServer", "/var/roon", "/music"]
 

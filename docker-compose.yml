@@ -6,7 +6,7 @@ services:
     container_name: roon-server
     build:
       context: .
-    image: roon-server:latest
+    image: elgeeko/roon-server:latest
     restart: unless-stopped
     init: true
     network_mode: host
