@@ -1,44 +1,47 @@
+# SPDX-FileCopyrightText: (c) 2021-2025 Jeff C. Jensen
+# SPDX-License-Identifier: MIT
+
+# syntax=docker/dockerfile:1
+
+ARG BUILDKIT_SBOM_SCAN_CONTEXT=true
+ARG BUILDKIT_SBOM_SCAN_STAGE=true
+ARG BASEIMAGE=noble-20250716
+
 ##################
 ## base stage
 ##################
-FROM ubuntu:24.04 AS base
+FROM ubuntu:${BASEIMAGE} AS base
 
 USER root
 
 # Preconfigure debconf for non-interactive installation - otherwise complains about terminal
 # Avoid ERROR: invoke-rc.d: policy-rc.d denied execution of start.
-ARG DEBIAN_FRONTEND=noninteractive
-ARG DISPLAY=localhost:0.0
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DISPLAY=localhost:0.0
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-RUN dpkg-divert --local --rename --add /sbin/initctl
-RUN ln -sf /bin/true /sbin/initctl
-RUN echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d
+
+# configure python
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # configure apt
 RUN apt update -q
-RUN apt install --no-install-recommends -y -q apt-utils 2>&1 \
-	| grep -v "debconf: delaying package configuration"
 RUN apt install --no-install-recommends -y -q ca-certificates
 
 # install prerequisites
 # Roon prerequisites:
-#  - Roon requirements: ffmpeg libasound2
+#  - Roon requirements: ffmpeg libasound2-dev
 #  - Roon access samba mounts: cifs-utils
 #  - Roon play to local audio device: alsa
-#  - Query USB devices inside Docker container: usbutils udev
-RUN apt install --no-install-recommends -y -q ffmpeg
-RUN apt install --no-install-recommends -y -q libasound2-dev
+#  - Query USB devices inside Docker container: usbutils udev libudev1
+RUN apt install --no-install-recommends -y -q ffmpeg libasound2-dev alsa
 RUN apt install --no-install-recommends -y -q cifs-utils
-RUN apt install --no-install-recommends -y -q alsa
-RUN apt install --no-install-recommends -y -q usbutils
-RUN apt install --no-install-recommends -y -q udev
+RUN apt install --no-install-recommends -y -q usbutils udev libudev1
 # app prerequisites
 #  - Docker healthcheck: curl
 #  - App entrypoint downloads Roon: wget bzip2
 #  - set timezone: tzdata
-RUN apt install --no-install-recommends -y -q curl
-RUN apt install --no-install-recommends -y -q wget
-RUN apt install --no-install-recommends -y -q bzip2
+RUN apt install --no-install-recommends -y -q curl wget bzip2
 RUN apt install --no-install-recommends -y -q tzdata
 
 # apt cleanup
@@ -51,38 +54,37 @@ RUN rm -rf /var/lib/apt/lists/*
 ####################
 FROM scratch
 COPY --from=base / /
+
 LABEL maintainer="elgeeko1"
 LABEL source="https://github.com/elgeeko1/roon-server-docker"
+LABEL org.opencontainers.image.title="Roon Server"
+LABEL org.opencontainers.description="Roon Server"
+LABEL org.opencontainers.image.authors="Jeff C. Jensen <11233838+elgeeko1@users.noreply.github.com>"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.version="1.1.0"
+LABEL org.opencontainers.image.url="https://hub.docker.com/r/elgeeko/roon-server"
+LABEL org.opencontainers.image.source="https://github.com/elgeeko1/roon-server-docker"
 
 # Roon documented ports
 #  - multicast (discovery?)
 EXPOSE 9003/udp
-#  - Roon Display
-EXPOSE 9100/tcp
-#  - RAAT
+#  - Roon API and RAAT server
+#    see https://community.roonlabs.com/t/roon-api-on-build-880-connection-refused-error/181619/3
+#    - RAAT server typically :9200
 EXPOSE 9100-9200/tcp
-#  - Roon events from cloud to core (websocket?)
-EXPOSE 9200/tcp
 # Chromecast devices
 EXPOSE 30000-30010/tcp
 
 # See https://github.com/elgeeko1/roon-server-docker/issues/5
 # https://community.roonlabs.com/t/what-are-the-new-ports-that-roon-server-needs-open-in-the-firewall/186023/16
+#   remoting/brokerserver (i.e. 9332), and Roon Display (i.e. 9330)
+EXPOSE 9093/udp
 EXPOSE 9330-9339/tcp
 
-# ports experimentally determined; or, documented
-# somewhere and source forgotten; or, commented
-# in a forum without explanation. I swear I know
-# what these ports do but I've run out of space
-# in the margin to write the solution. Either way
-# there are no other services running in the
-# container that should bind to these ports,
-# so exposing them shouldn't pose a security risk.
-EXPOSE 9001-9002/tcp
-EXPOSE 49863/tcp
-EXPOSE 52667/tcp
-EXPOSE 52709/tcp
-EXPOSE 63098-63100/tcp
+# Roon Arc
+EXPOSE 55000
+
+VOLUME ["/opt/RoonServer", "/var/roon", "/music"]
 
 USER root
 
@@ -114,8 +116,7 @@ RUN if [ "${CONTAINER_USER}" != "ubuntu" ]; \
 RUN usermod -aG audio ${CONTAINER_USER}
 
 # copy application files
-COPY app/entrypoint.sh /entrypoint.sh
-RUN  chmod +x /entrypoint.sh
+COPY --chmod=0755 app/entrypoint.sh /entrypoint.sh
 COPY README.md /README.md
 
 # configure filesystem
@@ -136,11 +137,10 @@ USER ${CONTAINER_USER}
 # entrypoint
 # set environment variables consumed by RoonServer
 # startup script
-ARG DISPLAY=localhost:0.0
-ENV DISPLAY=${DISPLAY}
+ENV DISPLAY=localhost:0.0
 ENV ROON_DATAROOT=/var/roon
 ENV ROON_ID_DIR=/var/roon
 
 ENTRYPOINT ["/entrypoint.sh"]
-HEALTHCHECK --interval=1m --timeout=1s \
+HEALTHCHECK --start-period=30s --interval=5m --timeout=5s \
 	CMD curl -f http://localhost:9330/display

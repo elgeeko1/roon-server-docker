@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# SPDX-FileCopyrightText: (c) 2021-2025 Jeff C. Jensen
+# SPDX-License-Identifier: MIT
+
 ROON_PACKAGE_URI=${ROON_PACKAGE_URI-"http://download.roonlabs.com/builds/RoonServer_linuxx64.tar.bz2"}
 
 echo Starting RoonServer with user `whoami`
@@ -26,7 +29,7 @@ fi
 #
 # since we're invoking from a script, we need to
 # catch signals to terminate Roon nicely
-/opt/RoonServer/start.sh &
+/opt/RoonServer/start.sh --ulimit nofile=8192 &
 roon_start_pid=$!
 trap 'kill -INT ${roon_start_pid}' SIGINT SIGQUIT SIGTERM
 wait "${roon_start_pid}" # block until Roon terminates
